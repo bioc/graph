@@ -1,21 +1,19 @@
 
 validGraph<-function(object, quietly=FALSE)
 {
-  bad = FALSE
-  if (is(object, "graphNEL")) {
+  if (class(object) == "graphNEL") {
       objEdges<-edges(object)
       objNodes<-nodes(object)
+      bad <- FALSE
       if (any(is.na(objNodes))) {
           if (!quietly ) cat("NA element in nodes.\n")
           bad <- TRUE
       }
-      if(length(objEdges)>0)
-        if(any(is.na(unlist(objEdges,use.names=FALSE)))) {
-          if(!quietly)
-            cat("NA element in edges.\n")
+      if (any(is.na(unlist(objEdges,use.names=FALSE)))) {
+          if( !quietly )
+              cat ("NA element in edges.\n")
           bad <- TRUE
-        }
-
+      }
       ##don't think we want to force this one
 #      if (length(objNodes)!=length(objEdges)) {
 #          if( !quietly )
@@ -36,26 +34,26 @@ validGraph<-function(object, quietly=FALSE)
       ##paste to->from and from->to if any are not duplicated then
       ##the edge is not reciprocal. Note we are not going to handle
       ##multiedges well.
-      if(object@edgemode == "undirected" && length(objEdges)>0 ) {
-        eds <- lapply(objEdges, function(x) x$edges)
-        v1 <- sapply(eds, length)
-        v2 <- sum(v1)
-        tM <- paste(rep(1:length(v1), v1), unlist(eds), sep=" -> " )
-        tM2 <- paste(unlist(eds), rep(1:length(v1), v1), sep=" -> " )
-        tM3 <- c(tM, tM2)
-        vv <- duplicated(tM3)
-        badn <- which(vv == FALSE)
-        badn <- badn[badn>v2]
-        if( length(badn)>0 ) {
-          if( !quietly ) {
-            from <- badn-v2
-            cat("The graph is undirected and\n")
-            cat("the following edges are not reciprocated\n")
-            cat(tM3[from], sep="\n")
-            cat("\n")
+      if( object@edgemode == "undirected") {
+          eds <- lapply(object@edgeL, function(x) x$edges)
+          v1 <- sapply(eds, length)
+          v2 <- sum(v1)
+          tM <- paste(rep(1:length(v1), v1), unlist(eds), sep=" -> " )
+          tM2 <- paste(unlist(eds), rep(1:length(v1), v1), sep=" -> " )
+          tM3 <- c(tM, tM2)
+          vv <- duplicated(tM3)
+          badn <- which(vv == FALSE)
+          badn <- badn[badn>v2]
+          if( length(badn)>0 ) {
+              if( !quietly ) {
+                  from <- badn-v2
+                  cat("The graph is undirected and\n")
+                  cat("the following edges are not reciprocated\n")
+                  cat(tM3[from], sep="\n")
+                  cat("\n")
+              }
+              return(FALSE)
           }
-          bad <- TRUE
-        }
       }
   }
   else if( is(object, "distGraph") ) {
@@ -100,43 +98,33 @@ validGraph<-function(object, quietly=FALSE)
   ## a node-edge-list graph
   ##the edgeL is a list, with edges, weights etc
 
-  setClass("graphNEL",
-    contains="graph",
-    representation(nodes="vector",edgeL="list"),
-    validity=function(object) validGraph(object))
+  setClass("graphNEL",representation(nodes="vector",edgeL="list"),
+            contains="graph")
 
-
-  setMethod("initialize", "graphNEL",
-    ## FIXME: what about edge weights?
-    function(.Object, nodes=character(0), edgeL, edgemode) {
+  setMethod("initialize", "graphNEL", function(.Object, nodes=character(0),
+       edgeL = vector("list",length=0), edgemode) {
        if( missing(edgemode) )
            edgemode <- "undirected"
-       if( missing(edgeL) ) {
-         edgeL <- vector(mode="list", length=length(nodes))
-         names(edgeL) <- nodes
-       } else {
-         if(length(nodes) != length(edgeL) )
-           stop("nodes and edges must align")
-         nameE <- names(edgeL)
-         if( !is.null(nameE) && !all( nameE %in% nodes) )
-           stop("names of nodes and edges must agree")
-         if( !is.null(nameE) )
-           edgeL <- edgeL[nodes]
-         ## (wh:) the following expression replaces one that was a bug
-         edgeL <- lapply(edgeL, function(x) {
-           if(is.character(x$edges))
-             x$edges <- match(x$edges, nodes)
-           return(x)
-         }) ## end lapply
-       } ## end else-if
+       if( !missing(edgeL) && length(edgeL) > 1 ) {
+           if(length(nodes) != length(edgeL) )
+               stop("nodes and edges must align")
+           nameE <- names(edgeL)
+           if( !is.null(nameE) && !all( nameE %in% nodes) )
+               stop("names of nodes and edges must agree")
+           if( !is.null(nameE) )
+               edgeL <- edgeL[nodes]
+           if( is.character(edgeL[[1]]) )
+               edgeL <- lapply(edgeL, function(x) match(x, nodes))
+       }
+       if( missing(edgeL) )
+           edgeL = vector("list",length=0)
+       if( missing(nodes) )
+           nodes = character(0)
 
        .Object@nodes <- nodes
        .Object@edgeL <- edgeL
        .Object@edgemode <- edgemode
-
-       validObject(.Object)
-       return(.Object)
-     })
+       .Object})
 
   setGeneric("nodes", function(object) standardGeneric("nodes"))
   setMethod("nodes", "graphNEL", function(object) object@nodes)
@@ -411,26 +399,23 @@ setGeneric("subGraph", function(snodes, graph) standardGeneric("subGraph"))
            stop("both graphs must have the same edgemode")
        xN <- nodes(x)
        yN <- nodes(y)
-       bN <- intersect(xN, yN)
-       if( length(bN) == 0 )
-           return(new("graphNEL", nodes=character(0),
-                      edgeL=vector("list", 0), edgemode=edgemode(x)))
-       ##lb <- length(bN)
-       ##if(lb != length(xN) || lb != length(yN))
-       ##    stop("graphs must have the same node set")
-       xE <- edges(x, bN)
-       xE = lapply(xE, function(x) {
-           x[x %in% bN]})
-       yE <- edges(y, bN)
-       yE = lapply(yE, function(x) {
-           x[x %in% bN]})
+       bN <- intersect(xN,yN)
+       lb <- length(bN)
+       if(lb != length(xN) || lb != length(yN))
+           stop("graphs must have the same node set")
+       yOrd <- match(xN, yN)
+       xE <- edges(x)
+       yE <- edges(y)[yOrd]
        rval <- vector("list", length=length(xE))
        for(i in 1:length(xE) ) {
            ans <- intersect(xE[[i]], yE[[i]])
-           rval[[i]] <- list(edges=match(ans, bN),
+           if( length(ans) > 0 )
+               rval[[i]] <- list(edges=match(ans, xN),
                                  weights=rep(1, length(ans)))
+           else
+               rval[[i]] <- list(edges=numeric(0), weights=numeric(0))
        }
-       names(rval) <- bN
+       names(rval) <- xN
        new("graphNEL", nodes=bN, edgeL=rval, edgemode=edgemode(x))
    })
 
@@ -486,13 +471,6 @@ setGeneric("subGraph", function(snodes, graph) standardGeneric("subGraph"))
                   curEntry$edges <- c(curEntry$edges, newEntry[[1]]$edges)
                   curEntry$weights <- c(curEntry$weights,
                                         newEntry[[1]]$weights)
-                  ##should be user adjustable -
-                  ##for now just remove extras
-                  dups = duplicated(curEntry$edges)
-                  if(any(dups) ) {
-                      curEntry$edges = curEntry$edges[!dups]
-                      curEntry$weights = curEntry$weights[!dups]
-                  }
                   if (!is.null(curEntry))
                       newEdgeL[[entry]] <- curEntry
               }
@@ -850,13 +828,9 @@ setGeneric("subGraph", function(snodes, graph) standardGeneric("subGraph"))
                 oE <- oE[-oEd]
                 oW <- oW[-oEd]
             }
-
             ##there might be no edges to add
-            if( length(oE) > 0 ) {
-                if (is.null(oW) )
-                  oW = rep(1, length(oE))
+            if( length(oE) > 0 )
                 g2 <- addEdge(newName, oE, g2, oW)
-            }
             ##if directed we need to fix up the in edges
             if( !is.null(inE) ) {
                 nC <- length(inE)
@@ -867,13 +841,6 @@ setGeneric("subGraph", function(snodes, graph) standardGeneric("subGraph"))
                     for( j in inE[[i]] )
                         oW <- c(oW, .edgeWeight(j, nmE[i], graph))
                 }
-                oEd = match(nodes, oE)
-                oEd = oEd[!is.na(oEd)]
-                if(length(oEd) > 0 ) {
-                      oE <- oE[-oEd]
-                      oW <- oW[-oEd]
-                }
-                if(is.null(oW)) oW=rep(1, length(oE))
                 g2 <- addEdge(oE, newName, g2, oW)
             }
             g2})
@@ -916,7 +883,7 @@ setGeneric("subGraph", function(snodes, graph) standardGeneric("subGraph"))
 
 
 ##print methods
-  setMethod("show", "graph",
+  setMethod("show", "graphNEL",
   function(object)
    {
      numNull<-numNoEdges(object)
@@ -999,7 +966,7 @@ sparseM2Graph <- function(sM, nodeNames) {
 ##ia the row offsets (
 graph2SparseM <- function(g, useweights=FALSE) {
     require("SparseM") || stop("need SparseM for this operation")
-    if (! is(g, "graphNEL"))
+    if( class(g) != "graphNEL" )
        stop("coercion only works for graphNEL class")
     nr = nc = numNodes(g)
     e1 = g@edgeL
@@ -1018,109 +985,4 @@ graph2SparseM <- function(g, useweights=FALSE) {
     ia = as.integer(cumsum(c(1, eL)))
     new("matrix.csr", ra=ra, ja=ja, ia=ia, dimension=c(nr, nc))
 }
-
-##--------------------------
-## edge names
-##--------------------------
-if (is.null(getGeneric("edgeNames")))
-    setGeneric("edgeNames", function(object, ...)
-               standardGeneric("edgeNames"))
-
-setMethod("edgeNames",
-  signature="graph",
-  definition=function(object, recipEdges=c("combined", "distinct")) {
-    recipEdges <- match.arg(recipEdges)
-
-#     to <- edges(object)
-#     from <- names(to)
-#     edgeNames <- as.vector(unlist(mapply(function(x,y) {
-#         if (length(x) > 0)
-#             paste(y,x,sep="~")
-#         else
-#             NULL}, to, from)))
-#     if (recipEdges == "combined") {
-#         revNames <-  unlist(mapply(function(x,y) {
-#             if (length(x) > 0)
-#                 paste(x,y,sep="~")
-#             else
-#                 NULL}, to, from))
-#         handled <- character()
-#         remove <- numeric()
-#         for (i in 1:length(edgeNames)) {
-#             if (! revNames[i] %in% handled)
-#                 handled <- c(handled, edgeNames[i])
-#             else
-#                 remove <- c(remove, i)
-#         }
-#         if (length(remove) > 0)
-#             edgeNames <- edgeNames[-remove]
-#     }
-#     edgeNames
-
-    ## convert names to integers ("standard node labeling")
-    to   <- lapply(edges(object), match, nodes(object))
-    from <- match(names(to), nodes(object))
-    
-    if(any(is.na(unlist(to)))||any(is.na(from)))
-      stop("Edge names do not match node names.")
-    
-    ## from-to matrix
-    ft <- matrix(c(rep(from, listLen(to)), to=unlist(to)), ncol=2)
-
-    if (recipEdges == "combined") {
-      ## revert those edges for which 'from' > 'to'
-      revert <- ft[, 1] > ft[, 2]
-      ft2 <- ft
-      ft2[revert,] <- ft2[revert, c(2, 1)]
-      ft <- ft[!duplicated.array(ft2, MARGIN=1),, drop=FALSE]
-    }
-    
-    return(paste(nodes(object)[ft[, 1]], nodes(object)[ft[, 2]], sep="~"))
-  },
-  valueClass="character")
-
-##--------------------------
-## clustering coefficient
-##--------------------------
-if (is.null(getGeneric("clusteringCoefficient")))
-  setGeneric("clusteringCoefficient", function(object, ...)
-             standardGeneric("clusteringCoefficient"))
-
-setMethod("clusteringCoefficient",
-  signature=c("graph", "ANY"),
-  definition=function(object, selfLoops=FALSE) {
-  if(edgemode(object)!="undirected")
-    return(NULL)
-
-  ## Convert names to integers ("standard node labeling")
-  ## This is here for efficiency - the matching code in the for-loop
-  ## below would also work for the characters (names).
-  to   <- lapply(edges(object), match, nodes(object))
-  from <- match(names(to), nodes(object))
-  
-  if(any(is.na(unlist(to)))||any(is.na(from)))
-    stop("Edge names do not match node names.")
-
-  if(!selfLoops) {  
-    ufrom <- rep(from, listLen(to))
-    uto   <- unlist(to)
-    if(any(ufrom==uto))
-      stop("Graph must not contain self-loops.")
-    totEdges <- function(i) i*(i-1)
-  } else {
-    totEdges <- function(i) i*i
-  }
-
-  clustCoef <- rep(as.numeric(NA), numNodes(object))
-  names(clustCoef) <- nodes(object)
-  for (i in which(listLen(to)>0)) {
-    ## to[[i]] are all the nodes reached from i.
-    ## to[ to[[i]] ] are all second-degree neihbours
-    nb <- sapply(to[ to[[i]] ], function(x) sum(!is.na(match(x, to[[i]]))))
-    clustCoef[from[i]] <- sum(nb) / totEdges(length(nb))
-  }
-  return(clustCoef)
-  },
-  valueClass="numeric")
-
 

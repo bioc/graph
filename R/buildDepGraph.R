@@ -9,7 +9,7 @@ pkgInstOrder <- function(pkg, repGraph) {
         stop("package parameter must be of length 1")
 
 
-    if (! is(repGraph, "graphNEL"))
+    if (! inherits(repGraph, "graphNEL"))
         stop("repGraph must be of type graph")
 
     nodes <- nodes(repGraph)

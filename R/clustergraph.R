@@ -188,20 +188,6 @@
  setMethod("nodes", "clusterGraph", function(object)
     as.character(unlist(object@clusters)))
 
- setReplaceMethod("nodes", c("clusterGraph", "character"),
-             function(object, value) {
-                 clens = sapply(object@clusters, length)
-                 if(length(value) != sum(clens))
-                     stop("need as many names as there are nodes")
-                 if(any(duplicated(value)))
-                     stop("node names must be unique")
-                 nc = length(clens)
-                 ni = rep(1:nc, clens)
-                 newc = split(value, ni)
-                 names(newc) = names(object@clusters)
-                 object@clusters = newc
-                 object})
-
  setMethod("edges", c("clusterGraph", "missing"), function(object, which) {
      edges<-list()
      for(clust in object@clusters) {
@@ -218,11 +204,11 @@
          stop("not all nodes are in the supplied graph")
      edges<-list()
      for(clust in object@clusters) {
-         cc <- intersect(as.character(clust), which)
+         cc <- as.character(clust)[which]
          for(i in seq(along=cc) )
-           edges[[cc[i]]] <- cc[-i]
+             edges[[cc[i]]] <- cc[-i]
      }
-     edges[which]})
+     edges})
 
 
 ##FIXME: this should be done from distances, but for now...)

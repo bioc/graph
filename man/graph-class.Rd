@@ -1,50 +1,33 @@
 \name{graph-class}
 \docType{class}
 \alias{graph-class}
-
 \alias{complement}
-\alias{complement,graph-method}
-
 \alias{connComp}
-\alias{connComp,graph-method}
-
 \alias{degree}
-\alias{degree,graph,missing-method}
-\alias{degree,graph,ANY-method}
-
-\alias{dfs,graph-method}
-
+\alias{degree}
 \alias{edgemode}
 \alias{edgemode<-}
+\alias{intersection}
+\alias{isConnected}
+\alias{join}
+\alias{numNodes}
+\alias{union}
+\alias{complement,graph-method}
+\alias{connComp,graph-method}
+\alias{degree,graph,missing-method}
+\alias{degree,graph,ANY-method}
+\alias{dfs,graph-method}
 \alias{edgemode,graph-method}
 \alias{edgemode<-,graph,character-method}
-
-\alias{edgeNames}
-\alias{edgeNames,graph-method}
-
-\alias{intersection}
 \alias{intersection,graph,graph-method}
-
-\alias{isConnected}
 \alias{isConnected,graph-method}
-
-\alias{join}
 \alias{join,graph,graph-method}
-
-\alias{numNodes}
 \alias{numNodes,graph-method}
-
-\alias{show}
-\alias{show,graph-method}
-
-\alias{union}
 \alias{union,graph,graph-method}
-
 \title{Class "graph" }
 \description{A virtual class that all graph classes should extend. }
-\section{Objects from the Class}{
-A virtual Class: No objects may be created from it.
-}
+\section{Objects from the Class}
+{A virtual Class: No objects may be created from it.}
 \section{Slots}{
   \describe{
     \item{\code{edgemode}:}{Indicates whether edges are
@@ -54,8 +37,6 @@ A virtual Class: No objects may be created from it.
 
 \section{Methods}{
   \describe{
-    \item{show}{\code{signature(object = "graph")}:A print method for
-      the graph.}
     \item{acc}{\code{signature(object = "graph")}: find all nodes
       accessible from the specified node. }
 
@@ -116,12 +97,7 @@ A virtual Class: No objects may be created from it.
       union of the two supplied graphs. They must have identical
       nodes. Currently this returns an object of class \code{graphNEL}.}
 
-    \item{edgeNames}{\code{signature(object = "graph")}: Returns a
-      vector of the edge names for this graph, using the format
-      \code{tail\~head}, where \code{head} is the name of the tail node
-      and \code{head} is the name of the head node.}
-
-    }
+    
   }
 }
 
@@ -167,6 +143,5 @@ A virtual Class: No objects may be created from it.
   edges(g1)
   edges(g1, "a")
 
-  ## edgeNames(g1)
 }
 \keyword{classes}
