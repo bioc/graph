@@ -883,7 +883,7 @@ setGeneric("subGraph", function(snodes, graph) standardGeneric("subGraph"))
 
 
 ##print methods
-  setMethod("show", "graph",
+  setMethod("show", "graphNEL",
   function(object)
    {
      numNull<-numNoEdges(object)
@@ -985,3 +985,4 @@ graph2SparseM <- function(g, useweights=FALSE) {
     ia = as.integer(cumsum(c(1, eL)))
     new("matrix.csr", ra=ra, ja=ja, ia=ia, dimension=c(nr, nc))
 }
+

@@ -11,7 +11,6 @@
 \alias{isConnected}
 \alias{join}
 \alias{numNodes}
-\alias{show}
 \alias{union}
 \alias{complement,graph-method}
 \alias{connComp,graph-method}
@@ -24,7 +23,6 @@
 \alias{isConnected,graph-method}
 \alias{join,graph,graph-method}
 \alias{numNodes,graph-method}
-\alias{show,graph-method}
 \alias{union,graph,graph-method}
 \title{Class "graph" }
 \description{A virtual class that all graph classes should extend. }
@@ -39,8 +37,6 @@
 
 \section{Methods}{
   \describe{
-    \item{show}{\code{signature(object = "graph")}:A print method for
-      the graph.}
     \item{acc}{\code{signature(object = "graph")}: find all nodes
       accessible from the specified node. }
 
