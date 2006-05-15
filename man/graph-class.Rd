@@ -35,6 +35,7 @@
 
 \alias{edgeNames}
 \alias{edgeNames,graph-method}
+\alias{edgeL,graph-method}
 
 \alias{edgeWeights,graph,character-method}
 \alias{edgeWeights,graph,numeric-method}
@@ -44,7 +45,7 @@
 %% implementation that everybody is happy with
 \alias{intersection}
 \alias{intersection,graph,graph-method}
-\alias{intersection2} 
+\alias{intersection2}
 \alias{intersection2,graph,graph-method}
 \alias{intersection3}
 \alias{intersection3,graph,graph-method}
@@ -127,7 +128,7 @@ A virtual Class: No objects may be created from it.
 
     \item{edgeDataDefaults}{Get and set default attributes for the edges
       in the graph.}
-    
+
     \item{edgeData}{Get and set attributes for edges in the graph}
 
     \item{edgemode}{\code{signature(object="graph")}: return the
@@ -148,7 +149,7 @@ A virtual Class: No objects may be created from it.
 
     \item{isAdjacent}{\code{signature(from="character",
     to="character")}: Determine if edges exists between nodes.}
-    
+
     \item{isConnected}{\code{signature(object = "graph")}: A boolean
       that details if a graph is fully connected or not.}
 
@@ -170,7 +171,7 @@ A virtual Class: No objects may be created from it.
 
     \item{numEdges}{\code{signature(object = "graph")}: compute the
       number of edges in a graph.}
-    
+
     \item{numNodes}{\code{signature(object = "graph")}: compute the
       number of nodes in a graph. }
 
@@ -224,14 +225,17 @@ A virtual Class: No objects may be created from it.
 \references{ Graph Theory and its Applications, J. Gross and J. Yellen. }
 \author{R. Gentleman and E. Whalen. }
 
-\seealso{\code{\link{graphNEL-class}}, \code{\link{distGraph-class}} }
+\seealso{\code{\link{graphNEL-class}}, \code{\link{graphAM-class}},
+  \code{\link{distGraph-class}}.
+}
 
 \examples{
   set.seed(123)
-  g1 <- randomGraph(letters[1:10], 1:4, p=.3)
+  g1 <- randomGraph(letters[1:10], 1:4, p= 0.3)
+  numEdges(g1)
+  edgeNames(g1)
   edges(g1)
-  edges(g1, "a")
-
-  ## edgeNames(g1)
+  edges(g1, c("a","d")) # those incident to 'a' or 'd'
 }
+\keyword{graphs}
 \keyword{classes}

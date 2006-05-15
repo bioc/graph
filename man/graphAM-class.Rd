@@ -5,6 +5,8 @@
 \alias{addNode,character,graphAM,missing-method}
 \alias{clearNode,character,graphAM-method}
 \alias{coerce,graphAM,graphNEL-method}
+\alias{coerce,graphAM,matrix-method}
+\alias{coerce,matrix,graphAM-method}
 \alias{edges,graphAM,missing-method}
 \alias{edges,graphAM,character-method}
 \alias{initialize,graphAM-method}
@@ -24,8 +26,16 @@
 \description{
   A graph class where node and edge information is represented as an
   adjacency matrix.  The adjacency matrix is square and element
-  \code{adjMat[i, j]} is non-zero if there is an edge from node i to
-  node j.  
+  \code{adjMat[i, j]} is one if there is an edge from node i to
+  node j and zero otherwise.
+}
+
+\details{
+  The non-zero matrix values can be used to initialize an edge
+  attribute.  If this is desired, use the \code{values} argument in the
+  call to \code{new} and provide a list with a single named element.
+  The name determines the attributes and the value provides the default
+  value for that attribute.
 }
 
 \section{Objects from the Class}{
@@ -34,7 +44,7 @@ Objects can be created by calls of the form \code{new("graphAM", adjMat, edgemod
 \section{Slots}{
   \describe{
     \item{\code{adjMat}:}{An adjacency \code{"matrix"} describing the
-    graph structure.  The \code{colnames} of the matrix will be used as
+    graph structure.  The \code{\link{colnames}} of the matrix will be used as
     node names for the graph if present.}
     \item{\code{edgemode}:}{A \code{"character"} vector specifying
       whether the graph is "directed" or "undirected".}
@@ -51,6 +61,15 @@ Class \code{"graph"}, directly.
     \item{addNode}{\code{signature(object = "graphAM", nodes = "character")}: ... }
     \item{clearNode}{\code{signature(node = "character", object = "graphAM")}: ... }
     \item{coerce}{\code{signature(from = "graphAM", to = "graphNEL")}: ... }
+    \item{coerce}{\code{signature(from = "graphAM", to = "matrix")}: In
+      converting to a \code{matrix}, if an edge attribute named
+      \code{"weight"} is defined, the non-zero elements of the matrix
+      will contain the corresponding attribute value.  For more flexible
+      matrix conversion, see \code{toMatrix}.}
+    \item{coerce}{\code{signature(from = "matrix", to = "graphAM")}:
+      This coerce method exists for symmetry.  In most cases, creating a
+      new \code{graphAM} instance using \code{new} gives one more
+      control over the resulting graph.}
     \item{edges}{\code{signature(object = "graphAM", which = "missing")}: ... }
     \item{edges}{\code{signature(object = "graphAM", which = "character")}: ... }
     \item{initialize}{\code{signature(.Object = "graphAM")}: ... }
@@ -71,13 +90,23 @@ Class \code{"graph"}, directly.
 \seealso{
   \code{\link{graph-class}}, \code{\link{graphNEL-class}}
 }
-
 \examples{
-    mat <- matrix(c(0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0),
-                  byrow=TRUE, ncol=4)
-    rownames(mat) <- letters[1:4]
-    colnames(mat) <- letters[1:4]
-    g1 <- new("graphAM", adjMat=mat)
-}
+mat <- rbind(c(0, 0, 1, 1),
+             c(0, 0, 1, 1),
+             c(1, 1, 0, 1),
+             c(1, 1, 1, 0))
+rownames(mat) <- colnames(mat) <- letters[1:4]
+g1 <- new("graphAM", adjMat=mat)
+stopifnot(identical(mat, as(g1, "matrix")), validObject(g1))
 
+## now with weights:
+mat[1,3] <- mat[3,1] <- 10
+gw <- new("graphAM", adjMat=mat, values=list(weight=1))
+
+## consistency check:
+stopifnot(identical(mat, as(gw, "matrix")),
+          validObject(gw),
+          identical(gw, as(as(gw, "graphNEL"), "graphAM")))
+}
+\keyword{graphs}
 \keyword{classes}

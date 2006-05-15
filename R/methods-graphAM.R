@@ -3,7 +3,7 @@
 isValidAdjMat <- function(adjMat, mode="undirected") {
     ## Determine if adjacency matrix adjMat is valid Element adjMat[i, j] == 1
     ## if the graph contains an edge FROM node i TO node j.  If mode is
-    ## "undirected", then adjMat should be symmetrix.    
+    ## "undirected", then adjMat should be symmetrix.
     if (! nrow(adjMat) == ncol(adjMat))
       stop("adjacency matrix must be square")
     if (mode == "undirected")
@@ -39,6 +39,7 @@ isValidNodeList <- function(nList, nNames) {
 
 
 initEdgeSet <- function(self, values) {
+    ## Put matrix elements into @edgeData using attr name from 'values'.
     if (!is.list(values) || length(values) != 1 || is.null(names(values)))
       stop("values must be a named list with one element")
     self@edgeData <- new("attrData", defaults=values)
@@ -68,6 +69,12 @@ setMethod("initialize", signature("graphAM"),
               else
                 .Object@edgeData <- new("attrData")
               .Object@nodeData <- new("attrData")
+              ## Matrix values have been stored in @edgeData,
+              ## so now we normalize to 0/1
+              adjMat <- .Object@adjMat
+              adjMat[adjMat != 0] <- 1:1
+              .Object@adjMat <- adjMat
+
               .Object
           })
 
@@ -80,7 +87,7 @@ getEdgeList <- function(adjMat, nodeNames) {
         result <- names(base::which(aRow != 0))
         if (is.null(result))
           result <- character(0)
-        eList[[i]] <- result
+	eList[[i]] <- result
     }
     names(eList) <- nodeNames
     eList
@@ -102,7 +109,7 @@ setMethod("edges", signature("graphAM", "character"),
 
 setMethod("nodes", signature("graphAM"),
           function(object) {
-              ## initialize gaurantees colnames
+              ## initialize guarantees colnames
               colnames(object@adjMat)
           })
 
@@ -176,7 +183,7 @@ getIndices <- function(nodes, from, to) {
       stop("Unknown node", sQuote(to), "specified in to")
     list(from=i, to=j)
 }
-    
+
 
 
 setMethod("addNode",
@@ -204,8 +211,8 @@ setMethod("addEdge",
                 graph@adjMat[idx$to, idx$from] <- 1
               graph
           })
-              
-              
+
+
 setMethod("clearNode",
           signature(node="character", object="graphAM"),
           function(node, object) {
@@ -232,7 +239,7 @@ setMethod("removeNode",
               object@adjMat <- object@adjMat[-idx, -idx]
 
               ## TODO: clear edge attributes
-              
+
               object
           })
 
@@ -287,18 +294,47 @@ setMethod("inEdges", signature(node="character", object="graphAM"),
           })
 
 
+setAs(from="graphAM", to="matrix",
+      function(from, to) {
+          if ("weight" %in% names(edgeDataDefaults(from))) {
+              tm <- t(from@adjMat)
+              tm[tm != 0] <- unlist(edgeData(from, attr="weight"))
+              m <- t(tm)
+          } else {
+              m <- from@adjMat
+          }
+	  rownames(m) <- colnames(m)
+	  m
+      })
+## ^^ the reverse is in ./mat2graph.R
+
 setAs(from="graphAM", to="graphNEL",
       function(from, to) {
-          n <- nodes(from)
-          edgeList <- lapply(edges(from), function(e) list(edges=match(e, n)))
-          gnel <- new("graphNEL", nodes=n, edgeL=edgeList,
-                      edgemode=edgemode(from))
-          ## copy edge and node attributes
-          gnel@edgeData <- from@edgeData
-          gnel@nodeData <- from@nodeData
-          gnel
+	  gnel <- new("graphNEL", nodes=nodes(from), edgeL=edges(from),
+		      edgemode=edgemode(from))
+	  ## copy edge and node attributes:
+	  gnel@edgeData <- from@edgeData
+	  gnel@nodeData <- from@nodeData
+	  gnel
       })
 
+
+## This is also used in mat2graph.R :
+NEL2mat <- function(g) {
+    theNodes <- nodes(g)
+    numNodes <- length(theNodes)
+    mat <- matrix(0:0, nrow=numNodes, ncol=numNodes)
+    rownames(mat) <- colnames(mat) <- theNodes
+    theEdges <- edges(g)
+    wts <- edgeWeights(g)
+    use.wts <- any(unlist(wts) != 1)
+    for (n in theNodes) {
+	e <- theEdges[[n]]
+	if (length(e))
+	    mat[n, e] <- if(use.wts) wts[[n]] else 1:1
+    }
+    mat
+}
 
 setAs(from="graphNEL", to="graphAM",
       function(from, to) {
@@ -309,12 +345,12 @@ setAs(from="graphNEL", to="graphAM",
           theEdges <- edges(from)
           for (n in theNodes) {
               e <- theEdges[[n]]
-              if (length(e)) 
+              if (length(e))
                 mat[n, e] <- 1
           }
           gam <- new("graphAM", mat, edgemode=edgemode(from))
           ## copy edge and node attributes
           gam@edgeData <- from@edgeData
           gam@nodeData <- from@nodeData
-          gam
+          gam                          
       })
