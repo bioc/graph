@@ -147,11 +147,18 @@ setMethod("isAdjacent",signature(object="graph", from="character",
 
 setMethod("edgeWeights", signature(object="graph", index="character"),
           function(object, index) {
-              ew <- tryCatch(edgeData(object, from=index, attr="weight"),
-                             error=function(e) {
-                                 edgeDataDefaults(object, "weight") <- 1:1
-                                 edgeData(object, from=index, attr="weight")
-                             })
+              if (!"weight" %in% names(edgeDataDefaults(object))) {
+                  ## No existing 'weight' edge attr, default to 1
+                  edgeDataDefaults(object, "weight") <- 1:1
+              }
+              default <- edgeDataDefaults(object, "weight")
+              if (!is.vector(default))
+                stop("edgeWeights can only be used if the 'weight' ",
+                     "edge attributes are vectors.")
+              ew <- edgeData(object, from=index, attr="weight")
+              if (!length(ew))
+                return(lapply(edges(object), function(x)
+                              vector(mode=mode(default), length=0)))
               gEdges <- edges(object)[index]
               edgeCounts <- sapply(gEdges, length)
               nn <- rep(index, edgeCounts)
@@ -174,18 +181,6 @@ setMethod("edgeWeights", signature(object="graph", index="missing"),
               index <- nodes(object)
               edgeWeights(object, index)
           })
-##               ew <- tryCatch(edgeData(object, attr="weight"),
-##                              error=function(e) {
-##                                  edgeDataDefaults(object, "weight") <- 1
-##                                  edgeData(object, attr="weight")
-##                              })
-##               edgeCounts <- sapply(edges(object), length)
-##               nn <- rep(nodes(object), edgeCounts)
-##               names(ew) <- unlist(edges(object))
-##               ans = split(unlist(ew), nn)
-##               ans <- c(ans, lapply(edges(g)[edgeCounts == 0], as.numeric))
-##               ans
-##           })
 
 
 setMethod("DFS", c("graph", "character", "ANY"), function(object, node,
@@ -522,8 +517,11 @@ setMethod("show", signature("graph"),
 
 
 ##take a sparse matrix - csr and put it into a graph
-sparseM2Graph <- function(sM, nodeNames) {
+sparseM2Graph <- function(sM, nodeNames, edgemode=c("directed", "undirected"))
+{
+    ## FIXME: this needs to become a method
     require("SparseM") || stop("need SparseM for this operation")
+    edgemode <- match.arg(edgemode)
     nN <- dim(sM)[1]
     if( nN != dim(sM)[2] )
         stop("only square matrices can be transformed, now")
@@ -542,9 +540,11 @@ sparseM2Graph <- function(sM, nodeNames) {
         ##need this because otherwise partial matching is done
         if( i %in% names(eL) )
             edL[[i]] <- list(edges=eL[[i]], weights=eW[[i]])
+        else
+          edL[[i]] <- list(edges=numeric(0))
     }
     names(edL) <- nodeNames
-    new("graphNEL", nodes=nodeNames, edgeL=edL)
+    new("graphNEL", nodes=nodeNames, edgeL=edL, edgemode=edgemode)
 }
 
 ##translate a graph to a SparseMatrix:
@@ -552,6 +552,7 @@ sparseM2Graph <- function(sM, nodeNames) {
 ##ja - the column indices
 ##ia the row offsets (
 graph2SparseM <- function(g, useweights=FALSE) {
+    ## FIXME: this needs to become a method
     require("SparseM") || stop("need SparseM for this operation")
     if (! is(g, "graphNEL"))
        stop("coercion only works for graphNEL class")
@@ -560,8 +561,8 @@ graph2SparseM <- function(g, useweights=FALSE) {
     e2 = lapply(e1, function(x) x$edges)
 
     eL = listLen(e2)
-    if( useweights )
-        ra = unlist(lapply(e1, function(x) x$weights))
+    if (useweights && ("weight" %in% names(edgeDataDefaults(g))))
+      ra <- unlist(edgeData(g, attr="weight"))
     else
         ra = rep(1, sum(eL))
     ja = as.integer(unlist(e2))
@@ -577,32 +578,6 @@ setMethod("edgeNames",
   signature="graph",
   definition=function(object, recipEdges=c("combined", "distinct")) {
     recipEdges <- match.arg(recipEdges)
-
-#     to <- edges(object)
-#     from <- names(to)
-#     edgeNames <- as.vector(unlist(mapply(function(x,y) {
-#         if (length(x) > 0)
-#             paste(y,x,sep="~")
-#         else
-#             NULL}, to, from)))
-#     if (recipEdges == "combined") {
-#         revNames <-  unlist(mapply(function(x,y) {
-#             if (length(x) > 0)
-#                 paste(x,y,sep="~")
-#             else
-#                 NULL}, to, from))
-#         handled <- character()
-#         remove <- numeric()
-#         for (i in 1:length(edgeNames)) {
-#             if (! revNames[i] %in% handled)
-#                 handled <- c(handled, edgeNames[i])
-#             else
-#                 remove <- c(remove, i)
-#         }
-#         if (length(remove) > 0)
-#             edgeNames <- edgeNames[-remove]
-#     }
-#     edgeNames
 
     ## convert names to integers ("standard node labeling")
     to   <- lapply(edges(object), match, nodes(object))
@@ -848,11 +823,10 @@ setMethod("edgeData", signature(self="graph", from="character", to="missing",
               graph:::.verifyNodes(from, nodes(self))
               gEdges <- edges(self)[from]
               lens <- sapply(gEdges, length)
-              if (any(lens == 0))
-                warning("No edges from nodes: ",
-                        paste(from[lens == 0], collapse=", "))
               fEdges <- rep(from, lens)
-              tEdges <- unlist(edges(self)[from])
+              if (!length(fEdges))
+                return(list())
+              tEdges <- unlist(gEdges)
               edgeKeys <- graph:::.getEdgeKeys(self, fEdges, tEdges)
               attrDataItem(self@edgeData, x=edgeKeys, attr=attr)
           })
@@ -862,7 +836,10 @@ setMethod("edgeData", signature(self="graph", from="missing", to="character",
                                 attr="character"),
           function(self, from, to, attr) {
               eDat <- edges(self)
-              from <- names(eDat)[sapply(eDat, function(x) to[1] %in% x)]
+              inE <- inEdges(to, self)
+              to <- rep(to, sapply(inE, length))
+              from <- unlist(inE)
+              ## from <- names(eDat)[sapply(eDat, function(x) to %in% x)]
               edgeKeys <- graph:::.getEdgeKeys(self, from, to)
               attrDataItem(self@edgeData, x=edgeKeys, attr=attr)
           })
@@ -1001,4 +978,4 @@ clearNodeData <- function(self, n) {
     self
 }
 
-## ---------------------------------------------------------------------
+
