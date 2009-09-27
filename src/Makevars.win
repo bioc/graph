@@ -1,0 +1,4 @@
+all: $(SHLIB) after
+
+after: $(SHLIB)
+	mv $(SHLIB) BioC_graph$(SHLIB_EXT)
