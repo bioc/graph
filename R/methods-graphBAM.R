@@ -1524,8 +1524,6 @@ setMethod("nodeData",
         function(self, n, attr) {
             if(length(attr) != 1L)
                 stop("'attr' must specify a single attribute name")
-            if( ! (attr %in% names(self@nodeData@data)))
-                stop("attribute not found: ", sQuote(attr))
             nds <- nodes(self)
             nodeData(self, n= nds, attr= attr)
         })
