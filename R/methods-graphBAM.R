@@ -721,8 +721,12 @@ setMethod("addNode",
             for(i in nms){
                 ft <- .Call(graph_bitarray_rowColPos,object@userAttrPos@edgePos[[i]])
                 posBit <- .createZeroBitPos(ndsLen)
-                g@userAttrPos@edgePos[[i]] <- setBitCell(posBit, ft[,"from"], ft[ ,"to"],
-                            rep(1L, nrow(ft)))             
+                from.nodes.new <- match(nodes(object)[ft[, 'from']], nodes(g))
+                to.nodes.new   <- match(nodes(object)[ft[, 'to']],   nodes(g))
+                g@userAttrPos@edgePos[[i]] <- setBitCell(posBit,
+                                                         from.nodes.new,
+                                                         to.nodes.new,
+                                                         rep(1L, nrow(ft)))
             } 
             g
         })

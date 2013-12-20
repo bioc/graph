@@ -1322,6 +1322,41 @@ test_graphBAM_addNode2 <- function(){
 }
 
 
+test_graphBAM_addNode_outOfAlphabeticalOrder_copyUserEdgeAttributes <- function(){
+
+    from = c("a", "b", "m", "m")
+    to   = c("b", "c", "y", "x")
+    weight=c(2.2, 2.0, 0.4, 0.2)
+    df <- data.frame(from, to, weight)
+    g <- graphBAM(df, edgemode = "directed")
+    
+    edgeDataDefaults(g, attr="color") <- "blue"
+    edgeDataDefaults(g, attr="type") <- "unknown"
+    edgeData(g, from = c("m","a"), to = c("y", "b"), attr = "color") <- c("red", "green")
+    edgeData(g, from = c("a", "b"), to = c("b", "c") , attr = "type") <- c("low", "high")
+
+    expected.edge.names <-  c("a|b", "b|c", "m|x", "m|y")
+    checkEquals(sort(names(edgeData(g, attr="color"))),
+                expected.edge.names)
+
+    checkEquals(unlist(edgeData(g, attr="color")[expected.edge.names],
+                       use.names=FALSE),
+                c("green", "blue", "blue", "red"))
+                      
+    g2 <- addNode("f", g)   # "f" is alphabetically in the midst of existing nodes
+   
+       # make sure that the addition of node f does not disrupt
+       # edgeData retrieval
+    checkEquals(sort(names(edgeData(g2, attr="color"))),
+                expected.edge.names)
+    checkEquals(unlist(edgeData(g, attr="color")[expected.edge.names],
+                       use.names=FALSE),
+                c("green", "blue", "blue", "red"))
+
+}
+
+
+
 
 test_graphBAM_nodeUnion_Attributes <- function(use.factors=TRUE){
    
